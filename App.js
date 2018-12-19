@@ -8,42 +8,47 @@
 
 import React, {Component} from 'react';
 import {Platform, StyleSheet, Text, View} from 'react-native';
+import { createAppContainer } from 'react-navigation'
+import { createStore, applyMiddleware, combineReducers } from "redux";
+import {
+  reduxifyNavigator,
+  createReactNavigationReduxMiddleware,
+  createNavigationReducer
+} from "react-navigation-redux-helpers";
 
-const instructions = Platform.select({
-  ios: 'Press Cmd+R to reload,\n' + 'Cmd+D or shake for dev menu',
-  android:
-    'Double tap R on your keyboard to reload,\n' +
-    'Shake or press menu button for dev menu',
+import { Provider, connect } from "react-redux";
+
+import AppNavigator from './src/routers'
+
+const navReducer = createNavigationReducer(AppNavigator);
+
+const appReducer = combineReducers({
+  nav: navReducer,
+})
+
+export const routerMiddleware = createReactNavigationReduxMiddleware(
+  "root",
+  state => state.router
+);
+
+const AppN = reduxifyNavigator(AppNavigator, "root");
+
+const mapStateToProps = state => ({
+  state: state.nav
 });
 
-type Props = {};
-export default class App extends Component<Props> {
+const AppWithNavigationState = connect(mapStateToProps)(AppN);
+
+const store = createStore(appReducer, applyMiddleware(routerMiddleware));
+
+global.actionUtil = (type, payload) => store.dispatch({ type, payload }) //定义全局actions
+
+export default class App extends Component {
   render() {
     return (
-      <View style={styles.container}>
-        <Text style={styles.welcome}>Welcome to React Native!</Text>
-        <Text style={styles.instructions}>To get started, edit App.js</Text>
-        <Text style={styles.instructions}>{instructions}</Text>
-      </View>
-    );
+      <Provider store={store}>
+        <AppWithNavigationState />
+      </Provider>
+    )
   }
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#F5FCFF',
-  },
-  welcome: {
-    fontSize: 20,
-    textAlign: 'center',
-    margin: 10,
-  },
-  instructions: {
-    textAlign: 'center',
-    color: '#333333',
-    marginBottom: 5,
-  },
-});
